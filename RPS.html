@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stone Paper Scissor Game</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      text-align: center;
+      background: linear-gradient(to right, #ff9a9e, #fad0c4);
+      color: #333;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 10px;
+      color: #fff;
+      text-shadow: 2px 2px #000;
+    }
+
+    span {
+      color: #ffeb3b;
+      font-weight: bold;
+    }
+
+    .result-box, .score-box {
+      margin-top: 30px;
+      font-size: 22px;
+      background: #000000aa;
+      padding: 20px;
+      border-radius: 15px;
+      display: inline-block;
+      box-shadow: 0 0 15px #fff;
+      color: #fff;
+    }
+
+    .buttons {
+      margin-top: 30px;
+    }
+
+    button {
+      background: linear-gradient(to bottom right, #00e3ae, #009fff);
+      border: none;
+      color: white;
+      padding: 15px 35px;
+      margin: 15px;
+      border-radius: 50px;
+      font-size: 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 15px #00c3ff;
+    }
+
+    button:hover {
+      transform: scale(1.1);
+      background: linear-gradient(to bottom right, #ff7eb9, #ff758c);
+      box-shadow: 0 0 20px #ff1493;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .choice-animation {
+      display: inline-block;
+      font-size: 28px;
+      padding: 10px 20px;
+      background: #fff;
+      color: #000;
+      border-radius: 10px;
+      margin: 5px;
+      animation: bounce 0.5s ease;
+    }
+
+    @keyframes bounce {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    audio {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 Stone Paper Scissor Game 🎮</h1>
+
+  <div class="result-box">
+    <h2>User Choice: <span id="user-choice" class="choice-animation"></span></h2>
+    <h2>Computer Choice: <span id="computer-choice" class="choice-animation"></span></h2>
+    <h2>Result: <span id="result"></span></h2>
+  </div>
+
+  <div class="buttons">
+    <button id="rock">🪨 Rock</button>
+    <button id="paper">📄 Paper</button>
+    <button id="scissor">✂️ Scissor</button>
+  </div>
+
+  <div class="score-box">
+    <h2>👤 You: <span id="user-score">0</span> | 🤖 Computer: <span id="computer-score">0</span></h2>
+  </div>
+
+  <canvas id="fireworks"></canvas>
+  <audio id="bg-music" src="https://www.fesliyanstudios.com/play-mp3/387" autoplay loop></audio>
+
+  <script>
+    const userChoiceDisplay = document.getElementById("user-choice");
+    const computerChoiceDisplay = document.getElementById("computer-choice");
+    const resultDisplay = document.getElementById("result");
+    const userScoreDisplay = document.getElementById("user-score");
+    const computerScoreDisplay = document.getElementById("computer-score");
+
+    const possibleChoices = document.querySelectorAll("button");
+    const synth = window.speechSynthesis;
+    const canvas = document.getElementById('fireworks');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    let particles = [];
+
+    function createFirework() {
+      for (let i = 0; i < 100; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          radius: Math.random() * 3,
+          color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+          speedX: (Math.random() - 0.5) * 10,
+          speedY: (Math.random() - 0.5) * 10,
+          alpha: 1
+        });
+      }
+    }
+
+    function animateFireworks() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p, index) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.fill();
+        p.x += p.speedX;
+        p.y += p.speedY;
+        p.alpha -= 0.01;
+        if (p.alpha <= 0) {
+          particles.splice(index, 1);
+        }
+      });
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(animateFireworks);
+    }
+
+    animateFireworks();
+
+    let userScore = 0;
+    let computerScore = 0;
+    let userChoice, computerChoice, result;
+
+    possibleChoices.forEach(choice =>
+      choice.addEventListener("click", (e) => {
+        userChoice = e.target.id;
+        animateChoice(userChoiceDisplay, userChoice);
+        generateComputerChoice();
+        determineResult();
+      })
+    );
+
+    function generateComputerChoice() {
+      const choices = ["rock", "paper", "scissor"];
+      const randomIndex = Math.floor(Math.random() * choices.length);
+      computerChoice = choices[randomIndex];
+      animateChoice(computerChoiceDisplay, computerChoice);
+    }
+
+    function animateChoice(element, choice) {
+      element.textContent = "";
+      element.classList.remove("choice-animation");
+      setTimeout(() => {
+        element.textContent = choice;
+        element.classList.add("choice-animation");
+      }, 50);
+    }
+
+    function speakResult(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.rate = 1;
+      synth.speak(utter);
+    }
+
+    function determineResult() {
+      if (userChoice === computerChoice) {
+        result = "It's a tie!";
+      } else if (
+        (userChoice === "rock" && computerChoice === "scissor") ||
+        (userChoice === "paper" && computerChoice === "rock") ||
+        (userChoice === "scissor" && computerChoice === "paper")
+      ) {
+        result = "You Win!";
+        userScore++;
+        createFirework();
+      } else {
+        result = "Computer Wins!";
+        computerScore++;
+      }
+      resultDisplay.textContent = result;
+      userScoreDisplay.textContent = userScore;
+      computerScoreDisplay.textContent = computerScore;
+      speakResult(result);
+    }
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+  </script>
+</body>
+</html>
